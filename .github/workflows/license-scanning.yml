@@ -54,7 +54,7 @@ jobs:
           license-checker-rseidelsohn \
             --excludePrivatePackages \
             --onlyAllow 'Apache-2.0;Apache-1.1;MIT;ISC;BSD-2-Clause;BSD-3-Clause;0BSD;Unlicense;Python-2.0;PostgreSQL;BSL-1.0;W3C;WTFPL;Xnet;NCSA;ZPL-2.0;zlib' \
-            --excludePackages '${{ steps.pkg.outputs.exclude }};bpmn-js@18.25.1;@bpmn-io/form-js@1.24.1;@bpmn-io/form-js-carbon-styles@1.24.1;@bpmn-io/form-js-editor@1.24.1;@bpmn-io/form-js-playground@1.24.1;@bpmn-io/form-js-viewer@1.24.1;cmmn-js@0.20.0;dmn-js@17.10.2;dmn-js-boxed-expression@17.10.2;dmn-js-decision-table@17.10.2;dmn-js-drd@17.10.2;dmn-js-literal-expression@17.10.2;dmn-js-shared@17.10.2;@camunda/rpa-integration@1.3.4;@ibm/plex@6.4.1;@ibm/plex@6.0.0-next.6;@ibm/plex-mono@1.1.0;@ibm/plex-sans@1.1.0;@ibm/plex-sans-arabic@1.1.0;@ibm/plex-sans-devanagari@1.1.0;@ibm/plex-sans-hebrew@1.1.0;@ibm/plex-sans-thai@1.1.0;@ibm/plex-sans-thai-looped@1.1.0;@ibm/plex-serif@1.1.0'
+            --excludePackages '${{ steps.pkg.outputs.exclude }};bpmn-js@18.25.1;@bpmn-io/form-js@1.24.1;@bpmn-io/form-js-carbon-styles@1.24.1;@bpmn-io/form-js-editor@1.24.1;@bpmn-io/form-js-playground@1.24.1;@bpmn-io/form-js-viewer@1.24.1;cmmn-js@0.20.0;dmn-js@17.10.2;dmn-js-boxed-expression@17.10.2;dmn-js-decision-table@17.10.2;dmn-js-drd@17.10.2;dmn-js-literal-expression@17.10.2;dmn-js-shared@17.10.2;@ibm/plex@6.4.1;@ibm/plex@6.0.0-next.6;@ibm/plex-mono@1.1.0;@ibm/plex-sans@1.1.0;@ibm/plex-sans-arabic@1.1.0;@ibm/plex-sans-devanagari@1.1.0;@ibm/plex-sans-hebrew@1.1.0;@ibm/plex-sans-thai@1.1.0;@ibm/plex-sans-thai-looped@1.1.0;@ibm/plex-serif@1.1.0'
           #
           # Excluded packages:
           # - Workspace packages: excluded to avoid UNKNOWN license from private packages
@@ -68,11 +68,6 @@ jobs:
           # - Font packages pulled in by @carbon/styles via @carbon/react
           # - OFL-1.1 is FINOS Category B, approved for font use
           # - See: https://opensource.org/licenses/OFL-1.1
-          #
-          # Known issues requiring follow-up:
-          # - @camunda/rpa-integration: Uses "Camunda License 1.0" (proprietary).
-          #   Temporarily excluded. Requires resolution: either replace with an
-          #   open-source alternative or obtain explicit approval from FINOS.
           #
           # Dual-licensed packages that pass (one allowed license):
           # - node-forge: (BSD-3-Clause OR GPL-2.0) - BSD-3-Clause is allowed
