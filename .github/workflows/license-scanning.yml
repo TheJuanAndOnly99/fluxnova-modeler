@@ -1,6 +1,14 @@
 name: License Scanning
 
 on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
   schedule:
     - cron: '0 8 * * 1'
   workflow_dispatch:
