@@ -5,11 +5,6 @@ on:
     - cron: '0 8 * * 1'
   workflow_dispatch:
   workflow_call:
-  push:
-    paths:
-      - '**/package.json'
-      - '**/package-lock.json'
-      - '.github/workflows/license-scanning.yml'
 
 permissions:
   contents: read
