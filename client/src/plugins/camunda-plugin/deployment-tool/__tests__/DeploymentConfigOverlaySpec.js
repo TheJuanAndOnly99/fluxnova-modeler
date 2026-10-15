@@ -666,6 +666,145 @@ describe('<DeploymentConfigOverlay>', function() {
       expect(resetCancel).to.have.been.called;
     });
   });
+
+
+  describe('OIDC login', function() {
+
+    let fetch;
+
+    beforeEach(function() {
+      fetch = sinon.stub(window, 'fetch').rejects(new TypeError('Failed to fetch'));
+    });
+
+    afterEach(function() {
+      fetch.restore();
+    });
+
+    function getOIDCConfiguration() {
+      return {
+        deployment: {
+          tenantId: '',
+          name: 'diagram'
+        },
+        endpoint: {
+          url: 'http://localhost:8088/engine-rest',
+          authType: AUTH_TYPES.OIDC,
+          issuerUrl: 'https://idp.example.com',
+          clientId: 'client-id'
+        }
+      };
+    }
+
+    // EndpointURLValidator holds the original validateConnectionWithoutCredentials,
+    // which calls validateConnection, so that is what must be stubbed
+    function createOIDCValidator(overrides = {}) {
+      const unauthorized = () => Promise.resolve({ code: GenericApiErrors.UNAUTHORIZED });
+
+      return new MockValidator({
+        validateConnection: unauthorized,
+        validateConnectionWithoutCredentials: unauthorized,
+        ...overrides
+      });
+    }
+
+    it('should disable the login button and show a pending state while logging in', async function() {
+
+      // given
+      let resolveLogin;
+
+      const validator = createOIDCValidator({
+        loginOIDC: () => new Promise((resolve) => {
+          resolveLogin = resolve;
+        })
+      });
+
+      const { getByRole } = createOverlay({
+        configuration: getOIDCConfiguration(),
+        validator
+      });
+
+      // when
+      await waitFor(() => expect(getByRole('button', { name: 'Log in' })).to.exist);
+      await user.click(getByRole('button', { name: 'Log in' }));
+
+      // then
+      const button = getByRole('button', { name: 'Waiting for browser...' });
+      expect(button.disabled).to.be.true;
+
+      // cleanup
+      resolveLogin({ success: true });
+      await waitFor(() => expect(getByRole('button', { name: 'Log in' })).to.exist);
+    });
+
+
+    it('should show success status after a successful login', async function() {
+
+      // given
+      const validator = createOIDCValidator({
+        loginOIDC: () => Promise.resolve({ success: true })
+      });
+
+      const { getByRole, getByText } = createOverlay({
+        configuration: getOIDCConfiguration(),
+        validator
+      });
+
+      // when
+      await waitFor(() => expect(getByRole('button', { name: 'Log in' })).to.exist);
+      await user.click(getByRole('button', { name: 'Log in' }));
+
+      // then
+      await waitFor(() => {
+        expect(getByText('Logged in.')).to.exist;
+      });
+    });
+
+
+    it('should show an error status and re-enable the button when login rejects', async function() {
+
+      // given
+      const validator = createOIDCValidator({
+        loginOIDC: () => Promise.reject(new Error('IPC channel closed'))
+      });
+
+      const { getByRole, getByText } = createOverlay({
+        configuration: getOIDCConfiguration(),
+        validator
+      });
+
+      // when
+      await waitFor(() => expect(getByRole('button', { name: 'Log in' })).to.exist);
+      await user.click(getByRole('button', { name: 'Log in' }));
+
+      // then
+      await waitFor(() => {
+        expect(getByText('Login failed.')).to.exist;
+      });
+
+      const button = getByRole('button', { name: 'Log in' });
+      expect(button.disabled).to.be.false;
+    });
+
+
+    it('should hide the "Remember credentials" toggle for OIDC', async function() {
+
+      // given
+      const validator = createOIDCValidator();
+
+      const { queryByText } = createOverlay({
+        configuration: getOIDCConfiguration(),
+        validator
+      });
+
+      // then
+      await waitFor(() => {
+        expect(queryByText('Log in')).to.exist;
+      });
+
+      expect(queryByText('Remember credentials')).to.not.exist;
+    });
+
+  });
 });
 
 

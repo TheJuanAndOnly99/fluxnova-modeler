@@ -38,7 +38,9 @@ export default class DeploymentConfigOverlay extends React.PureComponent {
     super(props);
 
     this.state = {
-      isAuthNeeded: false
+      isAuthNeeded: false,
+      oidcLoginStatus: null,
+      isOIDCLoginPending: false
     };
 
     this.valuesCache = { ...props.configuration };
@@ -156,7 +158,8 @@ export default class DeploymentConfigOverlay extends React.PureComponent {
 
       if (code === GenericApiErrors.UNAUTHORIZED) {
         this.setState({
-          isAuthNeeded: true
+          isAuthNeeded: true,
+          ...(endpoint.authType === AUTH_TYPES.OIDC && { oidcLoginStatus: 'error' })
         });
       }
 
@@ -192,6 +195,10 @@ export default class DeploymentConfigOverlay extends React.PureComponent {
         endpoint = omit(endpoint, [ 'token' ]);
       }
 
+      if (authType !== AUTH_TYPES.OIDC) {
+        endpoint = omit(endpoint, [ 'issuerUrl', 'clientId', 'scope', 'identityHeaderName', 'identityHeaderPrefix' ]);
+      }
+
       setValues({
         ...values,
         endpoint: {
@@ -207,6 +214,27 @@ export default class DeploymentConfigOverlay extends React.PureComponent {
     this.setState({
       isAuthNeeded
     });
+  };
+
+  onOIDCLogin = async (endpoint) => {
+
+    this.setState({
+      isOIDCLoginPending: true,
+      oidcLoginStatus: null
+    });
+
+    let result;
+
+    try {
+      result = await this.props.validator.loginOIDC(endpoint);
+    } catch (error) {
+      result = null;
+    } finally {
+      this.setState({
+        isOIDCLoginPending: false,
+        oidcLoginStatus: result && result.success ? 'success' : 'error'
+      });
+    }
   };
 
   checkAuthStatus = (values) => {
@@ -239,7 +267,9 @@ export default class DeploymentConfigOverlay extends React.PureComponent {
     } = this.props;
 
     const {
-      isAuthNeeded
+      isAuthNeeded,
+      isOIDCLoginPending,
+      oidcLoginStatus
     } = this.state;
 
     return (
@@ -348,7 +378,8 @@ export default class DeploymentConfigOverlay extends React.PureComponent {
                                   values={
                                     [
                                       { value: AUTH_TYPES.BASIC, label: 'HTTP Basic' },
-                                      { value: AUTH_TYPES.BEARER, label: 'Bearer token' }
+                                      { value: AUTH_TYPES.BEARER, label: 'Bearer token' },
+                                      { value: AUTH_TYPES.OIDC, label: 'OpenID Connect' }
                                     ]
                                   }
                                 />
@@ -412,8 +443,104 @@ export default class DeploymentConfigOverlay extends React.PureComponent {
                           </Field>
                         )}
 
+                        { isAuthNeeded && form.values.endpoint.authType === AUTH_TYPES.OIDC && (
+                          <React.Fragment>
+                            <Field
+                              name="endpoint.issuerUrl"
+                              validate={ (value) => {
+                                return validator.validateIssuerUrl(value || '', this.hasTriedSubmit);
+                              } }
+                            >
+                              {({ field, form: fieldForm }) => (
+                                <TextInput
+                                  field={ field }
+                                  form={ fieldForm }
+                                  fieldError={ fieldError }
+                                  label="Issuer URL"
+                                  hint="Base URL of the identity provider, used for OpenID Connect discovery."
+                                />
+                              )}
+                            </Field>
+
+                            <Field
+                              name="endpoint.clientId"
+                              validate={ (value) => {
+                                return validator.validateClientId(value || '', this.hasTriedSubmit);
+                              } }
+                            >
+                              {({ field, form: fieldForm }) => (
+                                <TextInput
+                                  field={ field }
+                                  form={ fieldForm }
+                                  fieldError={ fieldError }
+                                  label="Client ID"
+                                />
+                              )}
+                            </Field>
+
+                            <Field name="endpoint.scope">
+                              {({ field, form: fieldForm }) => (
+                                <TextInput
+                                  field={ field }
+                                  form={ fieldForm }
+                                  fieldError={ fieldError }
+                                  label="Scope"
+                                  hint="Defaults to 'openid profile offline_access'."
+                                />
+                              )}
+                            </Field>
+
+                            <Field name="endpoint.identityHeaderName">
+                              {({ field, form: fieldForm }) => (
+                                <TextInput
+                                  field={ field }
+                                  form={ fieldForm }
+                                  fieldError={ fieldError }
+                                  label="Identity header name"
+                                  hint="Defaults to 'x-fxn-identity-token'."
+                                />
+                              )}
+                            </Field>
+
+                            <Field name="endpoint.identityHeaderPrefix">
+                              {({ field, form: fieldForm }) => (
+                                <TextInput
+                                  field={ field }
+                                  form={ fieldForm }
+                                  fieldError={ fieldError }
+                                  label="Identity header prefix"
+                                  hint="Defaults to ''."
+                                />
+                              )}
+                            </Field>
+
+                            <div className="oidc-login">
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                disabled={
+                                  isOIDCLoginPending
+                                  || !form.values.endpoint.issuerUrl
+                                  || !form.values.endpoint.clientId
+                                }
+                                onClick={ () => this.onOIDCLogin(form.values.endpoint) }
+                              >
+                                { isOIDCLoginPending ? 'Waiting for browser...' : 'Log in' }
+                              </button>
+
+                              { oidcLoginStatus === 'success' && (
+                                <span className="oidc-login-status">Logged in.</span>
+                              )}
+
+                              { oidcLoginStatus === 'error' && (
+                                <span className="oidc-login-status invalid">Login failed.</span>
+                              )}
+                            </div>
+                          </React.Fragment>
+                        )}
+
                         {
-                          isAuthNeeded && (
+                          isAuthNeeded && form.values.endpoint.authType !== AUTH_TYPES.OIDC && (
                             <Field name="endpoint.rememberCredentials">
                               {({ field, form: fieldForm }) => (
                                 <ToggleSwitch

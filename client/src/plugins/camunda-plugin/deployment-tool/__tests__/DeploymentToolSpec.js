@@ -105,6 +105,31 @@ describe('<DeploymentTool>', function() {
   });
 
 
+  describe('#getDefaultEndpoint', function() {
+
+    it('should preserve OIDC auth type of an existing endpoint', async function() {
+
+      // given
+      const { instance } = createDeploymentTool();
+
+      const endpoint = {
+        id: 'endpointId',
+        url: 'http://localhost:8088/engine-rest',
+        authType: AUTH_TYPES.OIDC,
+        issuerUrl: 'https://idp.example.com',
+        clientId: 'client-id'
+      };
+
+      // when
+      const defaultEndpoint = await instance.getDefaultEndpoint(createTab(), endpoint);
+
+      // then
+      expect(defaultEndpoint.authType).to.eql(AUTH_TYPES.OIDC);
+    });
+
+  });
+
+
   describe('deploy', function() {
 
     it('should derive deployment name from filename', async function() {

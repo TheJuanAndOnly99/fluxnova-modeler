@@ -8,4 +8,20 @@
     font-size: 13px;
     color: var(--color-grey-225-10-55);
   }
+
+  .oidc-login {
+    display: flex;
+    align-items: center;
+    margin: 16px 0 8px 0;
+
+    .oidc-login-status {
+      margin-left: 12px;
+      font-size: 13px;
+      color: var(--color-grey-225-10-55);
+
+      &.invalid {
+        color: var(--color-red-225-10-55, #d9383a);
+      }
+    }
+  }
 }
