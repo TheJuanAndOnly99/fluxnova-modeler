@@ -14,7 +14,7 @@ import { omit } from 'min-dash';
 
 import classNames from 'classnames';
 
-import { default as CamundaAPI, DeploymentError } from '../shared/CamundaAPI';
+import { default as CamundaAPI, DeploymentError, getOidcAPI } from '../shared/CamundaAPI';
 import { ConnectionError, GenericApiErrors } from '../shared/RestAPI';
 import AUTH_TYPES from '../shared/AuthTypes';
 
@@ -51,8 +51,8 @@ const DEFAULT_ENDPOINT = {
 const TOMCAT_DEFAULT_URL = 'http://localhost:8080/engine-rest';
 
 export default class DeploymentTool extends PureComponent {
-  constructor() {
-    super();
+  constructor(props) {
+    super(props);
 
     this.state = {
       overlayState: null,
@@ -60,7 +60,7 @@ export default class DeploymentTool extends PureComponent {
       anchor: null
     };
 
-    this.validator = new DeploymentConfigValidator();
+    this.validator = new DeploymentConfigValidator(getOidcAPI(props));
     this._anchorRef = React.createRef();
   }
 
@@ -379,7 +379,7 @@ export default class DeploymentTool extends PureComponent {
       deployment
     } = configuration;
 
-    const api = new CamundaAPI(endpoint);
+    const api = new CamundaAPI(endpoint, getOidcAPI(this.props));
 
     return api.deployDiagram(tab.file, deployment);
   }
@@ -388,7 +388,7 @@ export default class DeploymentTool extends PureComponent {
 
     const { endpoint } = configuration;
 
-    const api = new CamundaAPI(endpoint);
+    const api = new CamundaAPI(endpoint, getOidcAPI(this.props));
 
     return api.getVersion();
   }
@@ -510,7 +510,9 @@ export default class DeploymentTool extends PureComponent {
 
     // since we have deprecated AUTH_TYPES.none, we should correct existing
     // configurations
-    if (endpoint.authType !== AUTH_TYPES.BASIC && endpoint.authType !== AUTH_TYPES.BEARER) {
+    if (endpoint.authType !== AUTH_TYPES.BASIC &&
+        endpoint.authType !== AUTH_TYPES.BEARER &&
+        endpoint.authType !== AUTH_TYPES.OIDC) {
       endpoint.authType = DEFAULT_ENDPOINT.authType;
     }
 

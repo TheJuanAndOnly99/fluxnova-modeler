@@ -19,6 +19,8 @@ const FILE_NOT_FOUND_ERROR = 'File not found.';
 const EMPTY_USERNAME_ERROR = 'Credentials are required to connect to the server.';
 const EMPTY_PASSWORD_ERROR = 'Credentials are required to connect to the server.';
 const EMPTY_TOKEN_ERROR = 'Token must not be empty.';
+const EMPTY_ISSUER_URL_ERROR = 'Issuer URL must not be empty.';
+const EMPTY_CLIENT_ID_ERROR = 'Client ID must not be empty.';
 const INVALID_URL_ERROR = 'Endpoint URL must start with "http://" or "https://".';
 const NON_COMPLETE_ERROR = 'Should point to a running Fluxnova REST API.';
 
@@ -116,6 +118,120 @@ describe('<DeploymentConfigValidator>', function() {
     expect(validate()).to.eql(EMPTY_TOKEN_ERROR);
     expect(validate('')).to.eql(EMPTY_TOKEN_ERROR);
     expect(validate('token')).to.not.exist;
+  });
+
+
+  it('should validate issuer url', function() {
+
+    // given
+    const validate = issuerUrl => validator.validateIssuerUrl(issuerUrl, true);
+
+    // then
+    expect(validate()).to.eql(EMPTY_ISSUER_URL_ERROR);
+    expect(validate('')).to.eql(EMPTY_ISSUER_URL_ERROR);
+    expect(validate('https://idp.example.com')).to.not.exist;
+  });
+
+
+  it('should validate client id', function() {
+
+    // given
+    const validate = clientId => validator.validateClientId(clientId, true);
+
+    // then
+    expect(validate()).to.eql(EMPTY_CLIENT_ID_ERROR);
+    expect(validate('')).to.eql(EMPTY_CLIENT_ID_ERROR);
+    expect(validate('client-id')).to.not.exist;
+  });
+
+
+  it('should validate OIDC endpoint', function() {
+
+    // given
+    validator.validateIssuerUrl('', true);
+    validator.validateClientId('', true);
+
+    // when
+    const errors = validator.validateEndpoint({
+      authType: AUTH_TYPES.OIDC,
+      url: 'http://localhost:8080',
+      issuerUrl: '',
+      clientId: ''
+    });
+
+    // then
+    expect(errors).to.include({
+      issuerUrl: EMPTY_ISSUER_URL_ERROR,
+      clientId: EMPTY_CLIENT_ID_ERROR
+    });
+  });
+
+
+  it('should not validate issuer url and client id for non-OIDC auth types', function() {
+
+    // given
+    validator.validateIssuerUrl('', true);
+    validator.validateClientId('', true);
+
+    // when
+    const errors = validator.validateEndpoint({
+      authType: AUTH_TYPES.BASIC,
+      url: 'http://localhost:8080'
+    });
+
+    // then
+    expect(errors).to.not.have.property('issuerUrl');
+    expect(errors).to.not.have.property('clientId');
+  });
+
+
+  it('should login via OIDC', async function() {
+
+    // given
+    const loginSpy = sinon.spy(() => Promise.resolve({ success: true }));
+
+    validator.oidcAPI = { login: loginSpy };
+
+    const endpoint = { issuerUrl: 'https://idp.example.com', clientId: 'client-id' };
+
+    // when
+    const result = await validator.loginOIDC(endpoint);
+
+    // then
+    expect(loginSpy).to.have.been.calledWith(endpoint);
+    expect(result).to.eql({ success: true });
+  });
+
+
+  it('should report OIDC login as unavailable without an oidcAPI', async function() {
+
+    // given
+    validator.oidcAPI = null;
+
+    // when
+    const result = await validator.loginOIDC({});
+
+    // then
+    expect(result).to.eql({ success: false, reason: 'NOT_AVAILABLE' });
+  });
+
+
+  it('should not set a field error for OIDC authorization errors', function() {
+
+    // given
+    const {
+      onExternalError,
+      issuerUrlValidator,
+      validateIssuerUrl
+    } = validator;
+
+    issuerUrlValidator.setCachedValue('https://idp.example.com');
+
+    // when
+    onExternalError(AUTH_TYPES.OIDC, 'error', 'UNAUTHORIZED', noop);
+
+    // then
+    expect(validateIssuerUrl('https://idp.example.com', false)).to.not.exist;
   });
 
 
